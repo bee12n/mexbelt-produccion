@@ -1,4 +1,4 @@
-import { elapsedSeconds, formatDuration, formatMinutos } from '../lib/time';
+import { elapsedSeconds, formatDuration } from '../lib/time';
 
 const ETIQUETAS = { pendiente: 'Pendiente', corriendo: 'En curso', pausado: 'Pausada', completado: 'Completada' };
 
@@ -11,9 +11,7 @@ export default function SubtareaItem({ sub, onIniciar, onPausar, onCompletar }) 
         <span className={`dot ${sub.estado === 'corriendo' ? 'corriendo' : sub.estado === 'completado' ? 'completado' : 'pausado'}`}></span>
         <div>
           <div className="subtask-row-name">{sub.proc}</div>
-          <div className="subtask-row-sub">
-            {ETIQUETAS[sub.estado]} · est. {formatMinutos(sub.tiempoEstimado)}
-          </div>
+          <div className="subtask-row-sub">{ETIQUETAS[sub.estado]}</div>
         </div>
       </div>
       <div className="subtask-row-right">
