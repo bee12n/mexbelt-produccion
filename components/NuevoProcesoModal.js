@@ -1,77 +1,181 @@
--- ============================================================
--- Control de Producción Mexbelt — esquema de base de datos
--- Pega TODO este archivo en Supabase > SQL Editor > New query > Run
--- ============================================================
+import { useState } from 'react';
+import { supabase } from '../lib/supabaseClient';
 
-create extension if not exists pgcrypto;
+const TIPOS_PROCESO = [
+    'Corte',
+    'Vulcanizado',
+    'Empalme',
+    'Preparacion',
+    'Otro',
+  ];
 
-create table if not exists procesos (
-  id uuid primary key default gen_random_uuid(),
-  proceso text not null,
-  material text not null,
-  producto_nombre text not null,
-  ancho_in numeric not null,
-  largo_m numeric not null,
-  operador text not null,
-  estado text not null check (estado in ('corriendo','pausado','finalizado')),
-  segmentos jsonb not null default '[]'::jsonb,
-  subtareas jsonb not null default '[]'::jsonb,
-  tiempo_estimado_min numeric not null default 0,
-  creado_en timestamptz not null default now(),
-  finalizado_en timestamptz
-);
+const MATERIALES = [
+    'PVC',
+    'PU',
+    'Hule',
+    'Neopreno',
+    'Poliuretano',
+    'Otro',
+  ];
 
--- Si la tabla ya existía de antes (esquema previo sin checklist de subtareas),
--- estas líneas agregan las columnas nuevas sin tocar nada más. Es seguro re-correr
--- todo este archivo cuantas veces quieras.
-alter table procesos add column if not exists subtareas jsonb not null default '[]'::jsonb;
-alter table procesos add column if not exists tiempo_estimado_min numeric not null default 0;
+const SUBTAREAS_POR_TIPO = {
+    Corte: ['Medir y marcar', 'Cortar banda', 'Verificar medidas'],
+    Vulcanizado: ['Preparar prensa', 'Colocar banda', 'Vulcanizar', 'Enfriar'],
+    Empalme: ['Lijar extremos', 'Aplicar cemento', 'Unir', 'Prensar'],
+    Preparacion: ['Limpiar superficie', 'Cortar material', 'Armar'],
+    Otro: ['Tarea 1'],
+};
 
-alter table procesos enable row level security;
+export default function NuevoProcesoModal({ onClose, onCreado }) {
+    const [operador, setOperador] = useState('');
+    const [tipoProceso, setTipoProceso] = useState('');
+    const [productoNombre, setProductoNombre] = useState('');
+    const [anchoMm, setAnchoMm] = useState('');
+    const [largoMm, setLargoMm] = useState('');
+    const [material, setMaterial] = useState('PVC');
+    const [tiempoEstimadoMin, setTiempoEstimadoMin] = useState('');
+    const [guardando, setGuardando] = useState(false);
+    const [error, setError] = useState('');
 
--- IMPORTANTE: cambia estos dos correos por los reales de Ale y Ximena
--- ANTES de correr este script (o edítalos después con ALTER POLICY).
--- Deben coincidir exactamente con los correos que les crees en
--- Authentication > Users.
+  async function handleSubmit(e) {
+        e.preventDefault();
+        setError('');
 
-drop policy if exists "operadores insertan procesos" on procesos;
-create policy "operadores insertan procesos"
-  on procesos for insert
-  to anon
-  with check (true);
+      if (!operador || !tipoProceso || !productoNombre) {
+              setError('Por favor completa todos los campos obligatorios.');
+              return;
+      }
 
-drop policy if exists "operadores ven procesos activos" on procesos;
-create policy "operadores ven procesos activos"
-  on procesos for select
-  to anon
-  using (estado <> 'finalizado');
+      const subtareasBase = SUBTAREAS_POR_TIPO[tipoProceso] || ['Tarea 1'];
+        const subtareas = subtareasBase.map((nombre) => ({
+                nombre,
+                estado: 'pendiente',
+        }));
 
-drop policy if exists "operadores actualizan procesos activos" on procesos;
-create policy "operadores actualizan procesos activos"
-  on procesos for update
-  to anon
-  using (estado <> 'finalizado')
-  with check (true);
+      setGuardando(true);
+        const { data, error: dbError } = await supabase
+          .from('procesos')
+          .insert([
+            {
+                        proceso: tipoProceso,
+                        material,
+                        producto_nombre: productoNombre,
+                        ancho_in: parseFloat(anchoMm) || 0,
+                        largo_m: parseFloat(largoMm) || 0,
+                        operador,
+                        estado: 'corriendo',
+                        segmentos: [],
+                        subtareas,
+                        tiempo_estimado_min: parseFloat(tiempoEstimadoMin) || 0,
+            },
+                  ])
+          .select()
+          .single();
 
-drop policy if exists "admins ven todo" on procesos;
-create policy "admins ven todo"
-  on procesos for select
-  to authenticated
-  using (auth.jwt() ->> 'email' in ('ale@mexbelt.com', 'ximena@mexbelt.com'));
+      setGuardando(false);
 
-drop policy if exists "admins actualizan todo" on procesos;
-create policy "admins actualizan todo"
-  on procesos for update
-  to authenticated
-  using (auth.jwt() ->> 'email' in ('ale@mexbelt.com', 'ximena@mexbelt.com'))
-  with check (true);
+      if (dbError) {
+              setError(dbError.message);
+              return;
+      }
 
-drop policy if exists "admins eliminan" on procesos;
-create policy "admins eliminan"
-  on procesos for delete
-  to authenticated
-  using (auth.jwt() ->> 'email' in ('ale@mexbelt.com', 'ximena@mexbelt.com'));
+      onCreado(data);
+        onClose();
+  }
 
--- Habilita Realtime para que la tablet y el panel admin se actualicen
--- solos sin recargar la página.
-alter publication supabase_realtime add table procesos;
+  return (
+        <div className="modal-overlay">
+          <div className="modal-box">
+            <h2 className="modal-title">Nuevo proceso</h2>
+          <p className="modal-subtitle">
+              Registra el proceso que vas a iniciar. El cronometro de la primera
+            subtarea arranca al guardar.
+              </p>
+
+        <form onSubmit={handleSubmit} className="modal-form">
+                        <label className="form-label">OPERADOR</label>
+            <input
+              className="form-input"
+              placeholder="Tu nombre"
+              value={operador}
+              onChange={(e) => setOperador(e.target.value)}
+            />
+
+                          <label className="form-label">TIPO DE PROCESO</label>
+            <select
+              className="form-select"
+              value={tipoProceso}
+              onChange={(e) => setTipoProceso(e.target.value)}
+            >
+                            <option value="">Selecciona...</option>
+  {TIPOS_PROCESO.map((t) => (
+                  <option key={t} value={t}>{t}</option>
+                                 ))}
+  </select>
+
+          <label className="form-label">PRODUCTO (NOMBRE)</label>
+            <input
+              className="form-input"
+              placeholder="Ej. Banda transportadora lisa"
+              value={productoNombre}
+              onChange={(e) => setProductoNombre(e.target.value)}
+            />
+
+                          <div className="form-row">
+                            <div className="form-col">
+                              <label className="form-label">ANCHO (MM)</label>
+                <input
+                  className="form-input"
+                  type="number"
+                  placeholder="0"
+                  value={anchoMm}
+                  onChange={(e) => setAnchoMm(e.target.value)}
+                />
+                    </div>
+              <div className="form-col">
+                                  <label className="form-label">LARGO (MM)</label>
+                <input
+                  className="form-input"
+                  type="number"
+                  placeholder="0"
+                  value={largoMm}
+                  onChange={(e) => setLargoMm(e.target.value)}
+                />
+                    </div>
+                    </div>
+
+          <label className="form-label">MATERIAL</label>
+            <select
+              className="form-select"
+              value={material}
+              onChange={(e) => setMaterial(e.target.value)}
+            >
+              {MATERIALES.map((m) => (
+                              <option key={m} value={m}>{m}</option>
+                                          ))}
+</select>
+
+          <label className="form-label">TIEMPO TOTAL ESTIMADO (MIN)</label>
+          <input
+            className="form-input"
+            type="number"
+            placeholder="Ej. 90"
+            value={tiempoEstimadoMin}
+            onChange={(e) => setTiempoEstimadoMin(e.target.value)}
+          />
+
+            {error && <p className="form-error">{error}</p>}
+
+          <div className="modal-actions">
+                          <button type="button" className="btn-cancelar" onClick={onClose}>
+                            Cancelar
+              </button>
+            <button type="submit" className="btn-iniciar" disabled={guardando}>
+            {guardando ? 'Guardando...' : 'Iniciar proceso'}
+</button>
+  </div>
+  </form>
+  </div>
+  </div>
+  );
+}
