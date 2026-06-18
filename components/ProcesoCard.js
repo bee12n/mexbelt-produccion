@@ -5,7 +5,7 @@ export default function ProcesoCard({ r, onIniciarSub, onPausarSub, onCompletarS
   const subtareas = r.subtareas || [];
   const completadas = subtareas.filter((s) => s.estado === 'completado').length;
   const total = subtareas.length;
-  const tiempoEstimadoTotalMin = subtareas.reduce((acc, s) => acc + (s.tiempoEstimado || 0), 0);
+  const tiempoEstimadoTotalMin = r.tiempo_estimado_min || 0;
   const realSegundos = procesoElapsedSeconds(r);
   const pctAvance = total ? Math.round((completadas / total) * 100) : 0;
 
@@ -23,7 +23,7 @@ export default function ProcesoCard({ r, onIniciarSub, onPausarSub, onCompletarS
       <div className="timer-estimado">vs. estimado {formatMinutos(tiempoEstimadoTotalMin)}</div>
 
       <div className="meta-strong">{r.producto_nombre}</div>
-      <div className="meta-soft">{r.ancho_in}&quot; x {r.largo_m} m · {r.material}</div>
+      <div className="meta-soft">{r.ancho_in} x {r.largo_m} mm · {r.material}</div>
       <div className="meta-soft">Operador: {r.operador}</div>
 
       <div className="progress-bar"><div className="progress-bar-fill" style={{ width: `${pctAvance}%` }} /></div>
