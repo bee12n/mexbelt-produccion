@@ -39,13 +39,18 @@ export default function Home() {
   async function togglePlayPause(r) {
     const now = new Date().toISOString();
     const segmentos = [...r.segmentos];
+    let error;
     if (r.estado === 'corriendo') {
       const last = segmentos[segmentos.length - 1];
       if (last && !last.fin) last.fin = now;
-      await supabase.from('procesos').update({ estado: 'pausado', segmentos }).eq('id', r.id);
+      ({ error } = await supabase.from('procesos').update({ estado: 'pausado', segmentos }).eq('id', r.id));
     } else {
       segmentos.push({ inicio: now, fin: null });
-      await supabase.from('procesos').update({ estado: 'corriendo', segmentos }).eq('id', r.id);
+      ({ error } = await supabase.from('procesos').update({ estado: 'corriendo', segmentos }).eq('id', r.id));
+    }
+    if (error) {
+      alert('No se pudo actualizar el proceso. Revisa tu conexión e intenta de nuevo.\n' + error.message);
+      return;
     }
     cargar();
   }
@@ -56,7 +61,14 @@ export default function Home() {
     const segmentos = [...r.segmentos];
     const last = segmentos[segmentos.length - 1];
     if (last && !last.fin) last.fin = now;
-    await supabase.from('procesos').update({ estado: 'finalizado', segmentos, finalizado_en: now }).eq('id', r.id);
+    const { error } = await supabase
+      .from('procesos')
+      .update({ estado: 'finalizado', segmentos, finalizado_en: now })
+      .eq('id', r.id);
+    if (error) {
+      alert('No se pudo finalizar el proceso. Revisa tu conexión e intenta de nuevo.\n' + error.message);
+      return;
+    }
     cargar();
   }
 
