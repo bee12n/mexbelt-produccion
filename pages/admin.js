@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import { supabase } from '../lib/supabaseClient';
-import { elapsedSeconds, formatDuration, formatFecha } from '../lib/time';
+import { procesoElapsedSeconds, formatDuration, formatFecha, formatMinutos } from '../lib/time';
 
 const badgeClass = { corriendo: 'badge-corriendo', pausado: 'badge-pausado', finalizado: 'badge-finalizado' };
 const badgeText = { corriendo: 'En curso', pausado: 'Pausado', finalizado: 'Finalizado' };
@@ -73,18 +73,29 @@ export default function Admin() {
   const hoyStr = new Date().toDateString();
   const hoy = registros.filter((r) => new Date(r.creado_en).toDateString() === hoyStr);
   const enCurso = registros.filter((r) => r.estado === 'corriendo').length;
-  const tiempoTotalFiltro = filtrados.reduce((a, r) => a + elapsedSeconds(r), 0);
+  const tiempoTotalFiltro = filtrados.reduce((a, r) => a + procesoElapsedSeconds(r), 0);
   const finalizadosFiltro = filtrados.filter((r) => r.estado === 'finalizado');
   const promedio = finalizadosFiltro.length
-    ? Math.floor(finalizadosFiltro.reduce((a, r) => a + elapsedSeconds(r), 0) / finalizadosFiltro.length)
+    ? Math.floor(finalizadosFiltro.reduce((a, r) => a + procesoElapsedSeconds(r), 0) / finalizadosFiltro.length)
     : 0;
 
   function exportCSV() {
-    const headers = ['Inicio', 'Operador', 'Proceso', 'Producto', 'Ancho_in', 'Largo_m', 'Material', 'Estado', 'Duracion'];
-    const rows = filtrados.map((r) => [
-      new Date(r.creado_en).toLocaleString('es-MX'), r.operador, r.proceso, r.producto_nombre,
-      r.ancho_in, r.largo_m, r.material, r.estado, formatDuration(elapsedSeconds(r)),
-    ]);
+    const headers = [
+      'Inicio', 'Operador', 'Proceso', 'Producto', 'Ancho_in', 'Largo_m', 'Material', 'Estado',
+      'Tiempo_Estimado', 'Tiempo_Real', 'Subtareas_completadas', 'Subtareas_total', 'Desglose_subtareas',
+    ];
+    const rows = filtrados.map((r) => {
+      const subtareas = r.subtareas || [];
+      const estimadoMin = subtareas.reduce((a, s) => a + (s.tiempoEstimado || 0), 0);
+      const completadas = subtareas.filter((s) => s.estado === 'completado').length;
+      const desglose = subtareas.map((s) => `${s.proc}:${s.estado}`).join(' | ');
+      return [
+        new Date(r.creado_en).toLocaleString('es-MX'), r.operador, r.proceso, r.producto_nombre,
+        r.ancho_in, r.largo_m, r.material, r.estado,
+        formatMinutos(estimadoMin), formatDuration(procesoElapsedSeconds(r)),
+        completadas, subtareas.length, desglose,
+      ];
+    });
     const csv = [headers, ...rows].map((row) => row.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
     const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -179,7 +190,7 @@ export default function Admin() {
             <thead>
               <tr>
                 <th>Inicio</th><th>Operador</th><th>Proceso</th><th>Producto</th>
-                <th>Material</th><th>Estado</th><th>Duración</th><th></th>
+                <th>Material</th><th>Estado</th><th>Avance</th><th>Duración</th><th></th>
               </tr>
             </thead>
             <tbody>
@@ -191,7 +202,8 @@ export default function Admin() {
                   <td>{r.producto_nombre} <span style={{ color: 'var(--text-soft)' }}>({r.ancho_in}&quot; x {r.largo_m}m)</span></td>
                   <td>{r.material}</td>
                   <td><span className={`badge ${badgeClass[r.estado]}`}>{badgeText[r.estado]}</span></td>
-                  <td className="mono">{formatDuration(elapsedSeconds(r))}</td>
+                  <td className="mono">{(r.subtareas || []).filter((s) => s.estado === 'completado').length}/{(r.subtareas || []).length}</td>
+                  <td className="mono">{formatDuration(procesoElapsedSeconds(r))}</td>
                   <td><button className="link-del" onClick={() => eliminar(r.id)}>Eliminar</button></td>
                 </tr>
               ))}
@@ -202,3 +214,4 @@ export default function Admin() {
     </div>
   );
 }
+
