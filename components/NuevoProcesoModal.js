@@ -20,8 +20,6 @@ export default function NuevoProcesoModal({ onClose, onCreated }) {
 
   function handleTipoChange(valor) {
     setTipoProceso(valor);
-    // Sugerimos el tiempo total estimado según el catálogo, pero solo si
-    // el usuario no lo ha editado a mano todavía.
     if (!tiempoEditadoManual) {
       setTiempoEstimadoMin(valor ? String(tiempoEstimadoTotalMin(valor)) : '');
     }
@@ -72,58 +70,59 @@ export default function NuevoProcesoModal({ onClose, onCreated }) {
   }
 
   return (
-    <div className="modal-overlay">
-      <div className="modal-box">
-        <h2 className="modal-title">Nuevo proceso</h2>
-        <p className="modal-subtitle">
+    <div className="overlay">
+      <div className="modal">
+        <h3>Nuevo proceso</h3>
+        <p className="modal-sub">
           Registra el proceso que vas a iniciar. El cronometro de la primera
           subtarea arranca al guardar.
         </p>
 
-        <form onSubmit={handleSubmit} className="modal-form">
-          <label className="form-label">OPERADOR</label>
-          <input
-            className="form-input"
-            placeholder="Tu nombre"
-            value={operador}
-            onChange={(e) => setOperador(e.target.value)}
-          />
+        <form onSubmit={handleSubmit}>
+          <div className="field">
+            <label>OPERADOR</label>
+            <input
+              placeholder="Tu nombre"
+              value={operador}
+              onChange={(e) => setOperador(e.target.value)}
+            />
+          </div>
 
-          <label className="form-label">TIPO DE PROCESO</label>
-          <select
-            className="form-select"
-            value={tipoProceso}
-            onChange={(e) => handleTipoChange(e.target.value)}
-          >
-            <option value="">Selecciona...</option>
-            {TIPOS_PROCESO.map((t) => (
-              <option key={t} value={t}>{t}</option>
-            ))}
-          </select>
+          <div className="field">
+            <label>TIPO DE PROCESO</label>
+            <select
+              value={tipoProceso}
+              onChange={(e) => handleTipoChange(e.target.value)}
+            >
+              <option value="">Selecciona...</option>
+              {TIPOS_PROCESO.map((t) => (
+                <option key={t} value={t}>{t}</option>
+              ))}
+            </select>
+          </div>
 
-          <label className="form-label">PRODUCTO (NOMBRE)</label>
-          <input
-            className="form-input"
-            placeholder="Ej. Banda transportadora lisa"
-            value={productoNombre}
-            onChange={(e) => setProductoNombre(e.target.value)}
-          />
+          <div className="field">
+            <label>PRODUCTO (NOMBRE)</label>
+            <input
+              placeholder="Ej. Banda transportadora lisa"
+              value={productoNombre}
+              onChange={(e) => setProductoNombre(e.target.value)}
+            />
+          </div>
 
-          <div className="form-row">
-            <div className="form-col">
-              <label className="form-label">ANCHO (MM)</label>
+          <div className="field-row">
+            <div className="field">
+              <label>ANCHO (MM)</label>
               <input
-                className="form-input"
                 type="number"
                 placeholder="0"
                 value={anchoMm}
                 onChange={(e) => setAnchoMm(e.target.value)}
               />
             </div>
-            <div className="form-col">
-              <label className="form-label">LARGO (MM)</label>
+            <div className="field">
+              <label>LARGO (MM)</label>
               <input
-                className="form-input"
                 type="number"
                 placeholder="0"
                 value={largoMm}
@@ -132,42 +131,58 @@ export default function NuevoProcesoModal({ onClose, onCreated }) {
             </div>
           </div>
 
-          <label className="form-label">MATERIAL</label>
-          <select
-            className="form-select"
-            value={material}
-            onChange={(e) => setMaterial(e.target.value)}
-          >
-            {MATERIALES.map((m) => (
-              <option key={m} value={m}>{m}</option>
-            ))}
-          </select>
-
-          <label className="form-label">TIEMPO TOTAL ESTIMADO (MIN)</label>
-          <input
-            className="form-input"
-            type="number"
-            placeholder="Ej. 90"
-            value={tiempoEstimadoMin}
-            onChange={(e) => {
-              setTiempoEditadoManual(true);
-              setTiempoEstimadoMin(e.target.value);
-            }}
-          />
+          <div className="field-row">
+            <div className="field">
+              <label>MATERIAL</label>
+              <select
+                value={material}
+                onChange={(e) => setMaterial(e.target.value)}
+              >
+                {MATERIALES.map((m) => (
+                  <option key={m} value={m}>{m}</option>
+                ))}
+              </select>
+            </div>
+            <div className="field">
+              <label>TIEMPO TOTAL ESTIMADO (MIN)</label>
+              <input
+                type="number"
+                placeholder="Ej. 90"
+                value={tiempoEstimadoMin}
+                onChange={(e) => {
+                  setTiempoEditadoManual(true);
+                  setTiempoEstimadoMin(e.target.value);
+                }}
+              />
+            </div>
+          </div>
 
           {tipoProceso && (
-            <p className="form-hint">
-              Checklist de {procesosPlanta[tipoProceso].length} subtareas para &quot;{tipoProceso}&quot;.
-            </p>
+            <div className="subtask-preview">
+              <div className="subtask-preview-head">
+                <span>Checklist ({procesosPlanta[tipoProceso].length} subtareas)</span>
+                <span className="subtask-preview-total mono">
+                  ~{tiempoEstimadoTotalMin(tipoProceso)} min
+                </span>
+              </div>
+              <ul className="subtask-preview-list">
+                {procesosPlanta[tipoProceso].map((s) => (
+                  <li key={s.proc}>
+                    <span>{s.proc}</span>
+                    <span className="mono">{s.tiempoEstimado} min</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           )}
 
           {error && <p className="form-error">{error}</p>}
 
           <div className="modal-actions">
-            <button type="button" className="btn-cancelar" onClick={onClose}>
+            <button type="button" className="btn btn-outline" onClick={onClose}>
               Cancelar
             </button>
-            <button type="submit" className="btn-iniciar" disabled={guardando}>
+            <button type="submit" className="btn btn-orange" disabled={guardando}>
               {guardando ? 'Guardando...' : 'Iniciar proceso'}
             </button>
           </div>
