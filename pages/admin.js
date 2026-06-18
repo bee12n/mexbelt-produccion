@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import { supabase } from '../lib/supabaseClient';
-import { procesoElapsedSeconds, formatDuration, formatFecha, formatMinutos } from '../lib/time';
+import { procesoElapsedSeconds, elapsedSeconds, formatDuration, formatFecha, formatMinutos } from '../lib/time';
 
 const badgeClass = { corriendo: 'badge-corriendo', pausado: 'badge-pausado', finalizado: 'badge-finalizado' };
 const badgeText = { corriendo: 'En curso', pausado: 'Pausado', finalizado: 'Finalizado' };
@@ -87,7 +87,9 @@ export default function Admin() {
     const rows = filtrados.map((r) => {
       const subtareas = r.subtareas || [];
       const completadas = subtareas.filter((s) => s.estado === 'completado').length;
-      const desglose = subtareas.map((s) => `${s.proc}:${s.estado}`).join(' | ');
+      const desglose = subtareas
+        .map((s) => `${s.proc}:${s.estado} (${formatDuration(elapsedSeconds(s))})`)
+        .join(' | ');
       return [
         new Date(r.creado_en).toLocaleString('es-MX'), r.operador, r.proceso, r.producto_nombre,
         r.ancho_in, r.largo_m, r.material, r.estado,
