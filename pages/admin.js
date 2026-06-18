@@ -81,18 +81,17 @@ export default function Admin() {
 
   function exportCSV() {
     const headers = [
-      'Inicio', 'Operador', 'Proceso', 'Producto', 'Ancho_in', 'Largo_m', 'Material', 'Estado',
+      'Inicio', 'Operador', 'Proceso', 'Producto', 'Ancho_mm', 'Largo_mm', 'Material', 'Estado',
       'Tiempo_Estimado', 'Tiempo_Real', 'Subtareas_completadas', 'Subtareas_total', 'Desglose_subtareas',
     ];
     const rows = filtrados.map((r) => {
       const subtareas = r.subtareas || [];
-      const estimadoMin = subtareas.reduce((a, s) => a + (s.tiempoEstimado || 0), 0);
       const completadas = subtareas.filter((s) => s.estado === 'completado').length;
       const desglose = subtareas.map((s) => `${s.proc}:${s.estado}`).join(' | ');
       return [
         new Date(r.creado_en).toLocaleString('es-MX'), r.operador, r.proceso, r.producto_nombre,
         r.ancho_in, r.largo_m, r.material, r.estado,
-        formatMinutos(estimadoMin), formatDuration(procesoElapsedSeconds(r)),
+        formatMinutos(r.tiempo_estimado_min || 0), formatDuration(procesoElapsedSeconds(r)),
         completadas, subtareas.length, desglose,
       ];
     });
@@ -199,7 +198,7 @@ export default function Admin() {
                   <td>{formatFecha(r.creado_en)}</td>
                   <td>{r.operador}</td>
                   <td>{r.proceso}</td>
-                  <td>{r.producto_nombre} <span style={{ color: 'var(--text-soft)' }}>({r.ancho_in}&quot; x {r.largo_m}m)</span></td>
+                  <td>{r.producto_nombre} <span style={{ color: 'var(--text-soft)' }}>({r.ancho_in} x {r.largo_m} mm)</span></td>
                   <td>{r.material}</td>
                   <td><span className={`badge ${badgeClass[r.estado]}`}>{badgeText[r.estado]}</span></td>
                   <td className="mono">{(r.subtareas || []).filter((s) => s.estado === 'completado').length}/{(r.subtareas || []).length}</td>
@@ -214,4 +213,3 @@ export default function Admin() {
     </div>
   );
 }
-
