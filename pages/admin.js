@@ -81,7 +81,7 @@ export default function Admin() {
 
   function exportCSV() {
     const headers = [
-      'Inicio', 'Operador', 'Proceso', 'Producto', 'Ancho_mm', 'Largo_mm', 'Material', 'Estado',
+      'Inicio', 'Operador', 'Numero_Pedido', 'Proceso', 'Producto', 'Cantidad_Piezas', 'Ancho_mm', 'Largo_mm', 'Material', 'Estado',
       'Tiempo_Estimado', 'Tiempo_Real', 'Subtareas_completadas', 'Subtareas_total', 'Desglose_subtareas',
     ];
     const rows = filtrados.map((r) => {
@@ -91,8 +91,8 @@ export default function Admin() {
         .map((s) => `${s.proc}:${s.estado} (${formatDuration(elapsedSeconds(s))})`)
         .join(' | ');
       return [
-        new Date(r.creado_en).toLocaleString('es-MX'), r.operador, r.proceso, r.producto_nombre,
-        r.ancho_in, r.largo_m, r.material, r.estado,
+        new Date(r.creado_en).toLocaleString('es-MX'), r.operador, r.numero_pedido || '', r.proceso, r.producto_nombre,
+        r.cantidad_piezas || 0, r.ancho_in, r.largo_m, r.material, r.estado,
         formatMinutos(r.tiempo_estimado_min || 0), formatDuration(procesoElapsedSeconds(r)),
         completadas, subtareas.length, desglose,
       ];
