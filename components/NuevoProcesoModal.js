@@ -16,6 +16,7 @@ export default function NuevoProcesoModal({ onClose, onCreated }) {
     const [tiempoEstimadoMin, setTiempoEstimadoMin] = useState('');
     const [tiempoEditadoManual, setTiempoEditadoManual] = useState(false);
     const [numeroPedido, setNumeroPedido] = useState('');
+        const [cantidadPiezas, setCantidadPiezas] = useState('');
     const [guardando, setGuardando] = useState(false);
     const [error, setError] = useState('');
 
@@ -56,6 +57,7 @@ export default function NuevoProcesoModal({ onClose, onCreated }) {
                     segmentos: [],
                     subtareas,
                     tiempo_estimado_min: parseFloat(tiempoEstimadoMin) || 0,
+                              cantidad_piezas: parseInt(cantidadPiezas) || 0,
                     numero_pedido: numeroPedido,
           },
               ]);
@@ -169,6 +171,17 @@ export default function NuevoProcesoModal({ onClose, onCreated }) {
               />
                   </div>
                   </div>
+
+                <div className="field">
+                                        <label>CANTIDAD DE PIEZAS A FABRICAR</label>
+                    <input
+                        type="number"
+                        placeholder="Ej. 10"
+                        min="1"
+                        value={cantidadPiezas}
+                        onChange={(e) => setCantidadPiezas(e.target.value)}
+                    />
+                            </div>
 
 {tipoProceso && (
               <div className="subtask-preview">
