@@ -67,3 +67,8 @@ create policy "admins eliminan"
 -- Habilita Realtime para que la tablet y el panel admin se actualicen
 -- solos sin recargar la página.
 alter publication supabase_realtime add table procesos;
+
+-- Columnas adicionales agregadas posteriormente
+alter table procesos add column if not exists subtareas jsonb not null default '[]'::jsonb;
+alter table procesos add column if not exists tiempo_estimado_min numeric not null default 0;
+alter table procesos add column if not exists numero_pedido text;
